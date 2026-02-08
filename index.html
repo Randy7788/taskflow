@@ -1,26 +1,121 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
- <head>
-  <meta charset="UTF-8"/>    
-  <meta name="viewport" content="width=device-width", initial-scale="1.0"/>
-<title>TaskFlow</title> 
-</head>
- <body>
-    <header>
-   <h1>TaskFlow</h1>
-<p>Mi app para organizar tareas(proyecto del plan de 4 meses).</p>
-    </header>
- <main>
-    <h2>Objetivo</h2>
-    <ul>
-        <li>Fronted con React</li>
-        <li>Backend con Node/Express</li>
-        <li>Base de datos PostgreSQL</li>
-    </ul>
- </main>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TaskFlow | Organiza tus tareas</title>
+    <meta
+      name="description"
+      content="TaskFlow es una app para organizar tareas. Proyecto full-stack (React + Node/Express + PostgreSQL)."
+    />
+  </head>
 
- <footer>
-    <small>Hecho por mí - M1-D1</small>
- </footer>
-</body>
+  <body>
+    <!-- HEADER: identidad + navegación -->
+    <header>
+      <div>
+        <strong>TaskFlow</strong>
+        <span> · Organiza tu día</span>
+      </div>
+
+      <nav aria-label="Navegación principal">
+        <a href="#caracteristicas">Características</a>
+        <a href="#como-funciona">Cómo funciona</a>
+        <a href="#roadmap">Roadmap</a>
+        <a href="#contacto">Contacto</a>
+      </nav>
+    </header>
+
+    <!-- MAIN: contenido principal -->
+    <main>
+      <!-- HERO (presentación) -->
+      <section aria-labelledby="titulo-principal">
+        <h1 id="titulo-principal">Organiza tus tareas sin complicarte</h1>
+        <p>
+          TaskFlow será una app full-stack para crear, priorizar y completar tareas.
+          En 4 meses: frontend, backend y base de datos.
+        </p>
+
+        <p>
+          <a href="#contacto">Quiero ver el avance</a>
+          ·
+          <a href="#roadmap">Ver roadmap</a>
+        </p>
+      </section>
+
+      <!-- CARACTERÍSTICAS -->
+      <section id="caracteristicas" aria-labelledby="titulo-caracteristicas">
+        <h2 id="titulo-caracteristicas">Características</h2>
+
+        <article>
+          <h3>✅ Tareas</h3>
+          <p>Crear, editar, marcar como completadas y filtrar por estado.</p>
+        </article>
+
+        <article>
+          <h3>🔒 Usuarios</h3>
+          <p>Registro e inicio de sesión con seguridad básica (JWT).</p>
+        </article>
+
+        <article>
+          <h3>📌 Prioridades</h3>
+          <p>Prioridad baja/media/alta y fechas límite.</p>
+        </article>
+      </section>
+
+      <!-- CÓMO FUNCIONA -->
+      <section id="como-funciona" aria-labelledby="titulo-como">
+        <h2 id="titulo-como">Cómo funciona</h2>
+        <ol>
+          <li>Creas tu cuenta.</li>
+          <li>Agregas tareas y prioridad.</li>
+          <li>Las completas y ves tu progreso.</li>
+
+        </ol>
+      </section>
+
+      <!-- ROADMAP -->
+      <section id="roadmap" aria-labelledby="titulo-roadmap">
+        <h2 id="titulo-roadmap">Roadmap</h2>
+        <ul>
+          <li><strong>Mes 1:</strong> Frontend (HTML/CSS/JS + React)</li>
+          <li><strong>Mes 2:</strong> Backend + DB (Express + PostgreSQL)</li>
+          <li><strong>Mes 3:</strong> Calidad (tests, CI, TypeScript)</li>
+          <li><strong>Mes 4:</strong> Rotación + empleo (automatización/datos/juegos)</li>
+        </ul>
+      </section>
+
+      <!-- CONTACTO -->
+      <section id="contacto" aria-labelledby="titulo-contacto">
+        <h2 id="titulo-contacto">Contacto</h2>
+        <p>
+          Si quieres ver avances del proyecto o contactarme:
+        </p>
+
+        <form>
+          <div>
+            <label for="nombre">Nombre</label>
+            <input id="nombre" name="nombre" type="text" placeholder="Tu nombre" required />
+          </div>
+
+          <div>
+            <label for="email">Email</label>
+            <input id="email" name="email" type="email" placeholder="tucorreo@email.com" required />
+          </div>
+
+          <div>
+            <label for="mensaje">Mensaje</label>
+            <textarea id="mensaje" name="mensaje" rows="4" placeholder="Escribe tu mensaje..." required></textarea>
+          </div>
+
+          <button type="submit">Enviar</button>
+        </form>
+      </section>
+    </main>
+
+    <!-- FOOTER -->
+    <footer>
+      <small>© <span>2026</span> TaskFlow — Hecho por Randy (M1-D2)</small>
+    </footer>
+  </body>
 </html>
