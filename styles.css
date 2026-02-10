@@ -205,3 +205,8 @@ footer {
   flex: 1 1 240px; /* crece, se encoge, base 240px */
   margin: 0;       /* evita que el margin anterior interfiera */
 }
+
+ html {
+    scroll-padding-top: 80px;
+    scroll-behavior: smooth;
+}
