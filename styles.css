@@ -210,3 +210,35 @@ footer {
     scroll-padding-top: 80px;
     scroll-behavior: smooth;
 }
+
+#task-list {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0 0;
+  display: grid;
+  gap: 10px;
+  max-width: 520px;
+}
+
+.task-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+}
+
+.task-item button {
+  background: #ef4444;
+}
+
+.task-item button:hover {
+  opacity: 0.9;
+}
+
+.task-done {
+  text-decoration: line-through;
+  color: #6b7280;
+}
