@@ -339,10 +339,20 @@ function limpiarErrores() {
     event.preventDefault();
 
     const value = taskInput.value.trim();
+
     if (value.length < 2) {
       taskStatus.textContent = "La tarea es muy corta.";
       return;
     }
+
+      const exists = tasks.some(
+    (t) => t.text.toLowerCase() === value.toLowerCase()
+  );
+
+  if (exists) {
+    taskStatus.textContent = "Esa tarea ya existe.";
+    return;
+  }
 
     const newTask = {
       id: crypto.randomUUID(),
