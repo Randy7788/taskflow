@@ -242,3 +242,43 @@ footer {
   text-decoration: line-through;
   color: #6b7280;
 }
+
+.task-toolbar {
+  max-width: 520px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.task-stats {
+  font-weight: 600;
+  color: #111827;
+}
+
+.task-filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filter-btn {
+  border: 1px solid #e5e7eb;
+  background: white;
+  color: #111827;
+  padding: 8px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.filter-btn:hover {
+  background: #f3f4f6;
+}
+
+.filter-btn.is-active {
+  background: #111827;
+  color: white;
+  border-color: #111827;
+}

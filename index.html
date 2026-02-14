@@ -105,6 +105,18 @@
     <p id="task-status" role="status"></p>
   </form>
 
+<!--Controles Demo-->
+
+<div class="task-toolbar" aria-label="Controles de tareas">
+ <div class="task-stats" id="task-stats">Total: 0 · Hechas: 0 · Pendientes: 0</div>
+
+  <div class="task-filters" role="group" aria-label="Filtros">
+    <button type="button" class="filter-btn is-active" data-filter="all">Todas</button>
+    <button type="button" class="filter-btn" data-filter="todo">Pendientes</button>
+    <button type="button" class="filter-btn" data-filter="done">Hechas</button>
+  </div>
+</div>
+
   <ul id="task-list" aria-label="Lista de tareas"></ul>
 </section>
 
