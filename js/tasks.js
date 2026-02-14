@@ -9,6 +9,9 @@ export function initTasksDemo() {
   const statsEl = document.getElementById("task-stats");
   const filterButtons = Array.from(document.querySelectorAll(".filter-btn"));
 
+  const btnClearDone = document.getElementById("btn-clear-done");
+  const btnClearAll = document.getElementById("btn-clear-all");
+
   const STORAGE_KEY = "taskflow_tasks";
   let tasks = [];
   let currentFilter = "all"; // all | todo | done
@@ -149,6 +152,37 @@ export function initTasksDemo() {
       renderTasks();
     });
   }
+
+  //Update
+  btnClearDone.addEventListener("click", () => {
+  const doneCount = tasks.filter((t) => t.done).length;
+
+  if (doneCount === 0) {
+    taskStatus.textContent = "No hay tareas completadas para borrar.";
+    return;
+  }
+
+  const ok = confirm(`¿Borrar ${doneCount} tarea(s) completada(s)?`);
+  if (!ok) return;
+
+  tasks = tasks.filter((t) => !t.done);
+  saveTasks();
+  renderTasks();
+});
+
+btnClearAll.addEventListener("click", () => {
+  if (tasks.length === 0) {
+    taskStatus.textContent = "No hay tareas para borrar.";
+    return;
+  }
+
+  const ok = confirm("¿Vaciar TODO? Esto no se puede deshacer.");
+  if (!ok) return;
+
+  tasks = [];
+  saveTasks();
+  renderTasks();
+}); 
 
   // Agregar tarea
   taskForm.addEventListener("submit", (event) => {
