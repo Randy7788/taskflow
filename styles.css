@@ -282,3 +282,72 @@ footer {
   color: white;
   border-color: #111827;
 }
+
+.task-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.task-actions button {
+  border: 1px solid #e5e7eb;
+  background: white;
+  color: #111827;
+  padding: 8px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.task-actions button:hover {
+  background: #f3f4f6;
+}
+
+#btn-clear-all {
+  border-color: #ef4444;
+  color: #b91c1c;
+}
+
+#btn-clear-all:hover {
+  background: #fee2e2;
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  max-width: 520px;
+  width: calc(100% - 24px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  background: white;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+  z-index: 9999;
+}
+
+.toast-action {
+  border: 1px solid #111827;
+  background: #111827;
+  color: white;
+  padding: 8px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.toast-close {
+  border: 1px solid #e5e7eb;
+  background: white;
+  padding: 8px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.toast[hidden] {
+  display: none;
+}
