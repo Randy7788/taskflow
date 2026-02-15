@@ -6,6 +6,11 @@ export function initTasksDemo() {
   const taskList = document.getElementById("task-list");
   const taskStatus = document.getElementById("task-status");
 
+  const toast = document.getElementById("toast");
+  const toastMessage = document.getElementById("toast-message");
+  const toastAction = document.getElementById("toast-action");
+  const toastClose = document.getElementById("toast-close");
+
   const statsEl = document.getElementById("task-stats");
   const filterButtons = Array.from(document.querySelectorAll(".filter-btn"));
 
@@ -16,6 +21,9 @@ export function initTasksDemo() {
   let tasks = [];
   let currentFilter = "all"; // all | todo | done
 
+  let undoSnapshot = null;
+  let undoTimer = null;
+
   function saveTasks() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
   }
@@ -25,10 +33,67 @@ export function initTasksDemo() {
     tasks = raw ? JSON.parse(raw) : [];
   }
 
+  function snapshotTasks() {
+    // copia profunda para que el snapshot no cambie cuando cambie tasks
+    undoSnapshot = JSON.parse(JSON.stringify(tasks));
+  }
+
+  function hideToast() {
+    if (!toast) return;
+
+    toast.hidden = true;
+
+    if (toastAction) {
+      toastAction.hidden = true;
+      toastAction.onclick = null;
+    }
+
+    if (undoTimer) {
+      clearTimeout(undoTimer);
+      undoTimer = null;
+    }
+
+    undoSnapshot = null;
+  }
+
+  function showToast(message, { actionText, onAction, timeout = 6000 } = {}) {
+    if (!toast || !toastMessage) return;
+
+    toastMessage.textContent = message;
+    toast.hidden = false;
+
+    if (toastAction && onAction) {
+      toastAction.textContent = actionText || "Deshacer";
+      toastAction.hidden = false;
+      toastAction.onclick = () => {
+        onAction();
+        hideToast();
+      };
+    } else if (toastAction) {
+      toastAction.hidden = true;
+      toastAction.onclick = null;
+    }
+
+    if (undoTimer) clearTimeout(undoTimer);
+    undoTimer = setTimeout(() => hideToast(), timeout);
+  }
+
+  // Eventos del toast
+  if (toastClose) {
+    toastClose.addEventListener("click", hideToast);
+  }
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && toast && !toast.hidden) hideToast();
+  });
+
   function updateStats() {
+    if (!statsEl) return;
+
     const total = tasks.length;
     const done = tasks.filter((t) => t.done).length;
     const todo = total - done;
+
     statsEl.textContent = `Total: ${total} · Hechas: ${done} · Pendientes: ${todo}`;
   }
 
@@ -39,6 +104,8 @@ export function initTasksDemo() {
   }
 
   function setActiveFilterBtn() {
+    if (!filterButtons.length) return;
+
     for (const btn of filterButtons) {
       btn.classList.toggle("is-active", btn.dataset.filter === currentFilter);
     }
@@ -47,6 +114,7 @@ export function initTasksDemo() {
   function handleEdit(task) {
     const nuevo = prompt("Editar tarea:", task.text);
     if (nuevo === null) return; // canceló
+
     const value = nuevo.trim();
     if (value.length < 2) {
       taskStatus.textContent = "La tarea editada es muy corta.";
@@ -110,7 +178,7 @@ export function initTasksDemo() {
         renderTasks();
       });
 
-      // Editar por doble click en el texto
+      // Doble click para editar
       text.addEventListener("dblclick", () => handleEdit(task));
 
       const actions = document.createElement("div");
@@ -125,7 +193,6 @@ export function initTasksDemo() {
       const del = document.createElement("button");
       del.type = "button";
       del.textContent = "Eliminar";
-
       del.addEventListener("click", () => {
         tasks = tasks.filter((t) => t.id !== task.id);
         saveTasks();
@@ -153,36 +220,66 @@ export function initTasksDemo() {
     });
   }
 
-  //Update
-  btnClearDone.addEventListener("click", () => {
-  const doneCount = tasks.filter((t) => t.done).length;
+  // Acciones: borrar completadas
+  if (btnClearDone) {
+    btnClearDone.addEventListener("click", () => {
+      const doneCount = tasks.filter((t) => t.done).length;
 
-  if (doneCount === 0) {
-    taskStatus.textContent = "No hay tareas completadas para borrar.";
-    return;
+      if (doneCount === 0) {
+        taskStatus.textContent = "No hay tareas completadas para borrar.";
+        return;
+      }
+
+      const ok = confirm(`¿Borrar ${doneCount} tarea(s) completada(s)?`);
+      if (!ok) return;
+
+      snapshotTasks();
+
+      tasks = tasks.filter((t) => !t.done);
+      saveTasks();
+      renderTasks();
+
+      showToast(`Borraste ${doneCount} completada(s).`, {
+        actionText: "Deshacer",
+        onAction: () => {
+          tasks = undoSnapshot || [];
+          saveTasks();
+          renderTasks();
+          showToast("Acción deshecha.");
+        },
+      });
+    });
   }
 
-  const ok = confirm(`¿Borrar ${doneCount} tarea(s) completada(s)?`);
-  if (!ok) return;
+  // Acciones: vaciar todo
+  if (btnClearAll) {
+    btnClearAll.addEventListener("click", () => {
+      if (tasks.length === 0) {
+        taskStatus.textContent = "No hay tareas para borrar.";
+        return;
+      }
 
-  tasks = tasks.filter((t) => !t.done);
-  saveTasks();
-  renderTasks();
-});
+      const ok = confirm("¿Vaciar TODO? Esto no se puede deshacer.");
+      if (!ok) return;
 
-btnClearAll.addEventListener("click", () => {
-  if (tasks.length === 0) {
-    taskStatus.textContent = "No hay tareas para borrar.";
-    return;
+      snapshotTasks();
+      const prevCount = tasks.length;
+
+      tasks = [];
+      saveTasks();
+      renderTasks();
+
+      showToast(`Borraste ${prevCount} tarea(s).`, {
+        actionText: "Deshacer",
+        onAction: () => {
+          tasks = undoSnapshot || [];
+          saveTasks();
+          renderTasks();
+          showToast("Acción deshecha.");
+        },
+      });
+    });
   }
-
-  const ok = confirm("¿Vaciar TODO? Esto no se puede deshacer.");
-  if (!ok) return;
-
-  tasks = [];
-  saveTasks();
-  renderTasks();
-}); 
 
   // Agregar tarea
   taskForm.addEventListener("submit", (event) => {
