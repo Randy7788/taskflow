@@ -1,159 +1,181 @@
+// ================================
+// Task Demo (M1-D11 refactor pro)
+// ================================
+// IDEA CLAVE DEL ARCHIVO:
+// - "el" = conexiones al HTML (DOM)
+// - "state" = la verdad del programa (tareas, filtro, undo)
+// - Helpers = cálculos (no cambian state)
+// - UI = render + toast (muestran cosas)
+// - Actions = cambian state + save + render
+// - Events = escuchan al usuario y llaman actions
+//
+// ORDEN (por qué así):
+// 1) DOM (necesario para todo)
+// 2) State (necesario para lógica)
+// 3) Data layer save/load (lo usan actions)
+// 4) Helpers (lo usa render)
+// 5) UI (render/toast)
+// 6) Actions (cambian state)
+// 7) Events (conectan UI -> actions)
+// 8) Init (load + render)
+
 export function initTasksDemo() {
-  const taskForm = document.getElementById("task-form");
-  if (!taskForm) return;
+  // =========================================================
+  // A) SELECTORES (DOM) — “enchufes” hacia el HTML
+  // =========================================================
+  const el = {
+    form: document.getElementById("task-form"),
+    input: document.getElementById("task-input"),
+    list: document.getElementById("task-list"),
+    status: document.getElementById("task-status"),
 
-  const taskInput = document.getElementById("task-input");
-  const taskList = document.getElementById("task-list");
-  const taskStatus = document.getElementById("task-status");
+    stats: document.getElementById("task-stats"),
+    filters: Array.from(document.querySelectorAll(".filter-btn")),
+    clearDone: document.getElementById("btn-clear-done"),
+    clearAll: document.getElementById("btn-clear-all"),
 
-  const toast = document.getElementById("toast");
-  const toastMessage = document.getElementById("toast-message");
-  const toastAction = document.getElementById("toast-action");
-  const toastClose = document.getElementById("toast-close");
+    toast: document.getElementById("toast"),
+    toastMsg: document.getElementById("toast-message"),
+    toastAction: document.getElementById("toast-action"),
+    toastClose: document.getElementById("toast-close"),
+  };
 
-  const statsEl = document.getElementById("task-stats");
-  const filterButtons = Array.from(document.querySelectorAll(".filter-btn"));
+  // “Guard”: si no existe el form, esta sección no está en la página
+  // y salimos para evitar errores.
+  if (!el.form) return;
 
-  const btnClearDone = document.getElementById("btn-clear-done");
-  const btnClearAll = document.getElementById("btn-clear-all");
-
+  // =========================================================
+  // B) ESTADO — “la verdad” del programa
+  // =========================================================
   const STORAGE_KEY = "taskflow_tasks";
-  let tasks = [];
-  let currentFilter = "all"; // all | todo | done
 
-  let undoSnapshot = null;
-  let undoTimer = null;
+  let state = {
+    tasks: [],            // lista real de tareas (fuente de verdad)
+    filter: "all",        // all | todo | done
+    undoSnapshot: null,   // “foto” de tareas antes de borrar
+    undoTimer: null,      // timer para auto-cerrar toast
+  };
 
-  function saveTasks() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+  // =========================================================
+  // C) DATA LAYER — guardar / cargar (solo persistencia)
+  // =========================================================
+  function save() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.tasks));
   }
 
-  function loadTasks() {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    tasks = raw ? JSON.parse(raw) : [];
+  function load() {
+    state.tasks = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
   }
 
+  // =========================================================
+  // D) HELPERS — cálculos (NO cambian state)
+  // =========================================================
+  function counts() {
+    const total = state.tasks.length;
+    const done = state.tasks.filter((t) => t.done).length;
+    const todo = total - done;
+    return { total, done, todo };
+  }
+
+  function visibleTasks() {
+    if (state.filter === "done") return state.tasks.filter((t) => t.done);
+    if (state.filter === "todo") return state.tasks.filter((t) => !t.done);
+    return state.tasks;
+  }
+
+  // Copia profunda: necesario para "Undo" (deshacer) real
   function snapshotTasks() {
-    // copia profunda para que el snapshot no cambie cuando cambie tasks
-    undoSnapshot = JSON.parse(JSON.stringify(tasks));
+    // Si copiáramos solo la referencia, el snapshot cambiaría junto con state.tasks
+    state.undoSnapshot = JSON.parse(JSON.stringify(state.tasks));
   }
 
+  // =========================================================
+  // E) UI LAYER — mostrar cosas (render + toast + mensajes)
+  // =========================================================
+  function setStatus(msg) {
+    if (!el.status) return;
+    el.status.textContent = msg || "";
+  }
+
+  function updateStatsUI() {
+    if (!el.stats) return;
+    const { total, done, todo } = counts();
+    el.stats.textContent = `Total: ${total} · Hechas: ${done} · Pendientes: ${todo}`;
+  }
+
+  function setActiveFilterUI() {
+    if (!el.filters.length) return;
+    for (const btn of el.filters) {
+      btn.classList.toggle("is-active", btn.dataset.filter === state.filter);
+    }
+  }
+
+  // Toast (mensaje flotante)
   function hideToast() {
-    if (!toast) return;
+    if (!el.toast) return;
 
-    toast.hidden = true;
+    el.toast.hidden = true;
 
-    if (toastAction) {
-      toastAction.hidden = true;
-      toastAction.onclick = null;
+    if (el.toastAction) {
+      el.toastAction.hidden = true;
+      el.toastAction.onclick = null;
     }
 
-    if (undoTimer) {
-      clearTimeout(undoTimer);
-      undoTimer = null;
+    // Limpia el timer si existía
+    if (state.undoTimer) {
+      clearTimeout(state.undoTimer);
+      state.undoTimer = null;
     }
 
-    undoSnapshot = null;
+    // Si el toast desaparece, el "deshacer" ya no aplica
+    state.undoSnapshot = null;
   }
 
   function showToast(message, { actionText, onAction, timeout = 6000 } = {}) {
-    if (!toast || !toastMessage) return;
+    if (!el.toast || !el.toastMsg) return;
 
-    toastMessage.textContent = message;
-    toast.hidden = false;
+    el.toastMsg.textContent = message;
+    el.toast.hidden = false;
 
-    if (toastAction && onAction) {
-      toastAction.textContent = actionText || "Deshacer";
-      toastAction.hidden = false;
-      toastAction.onclick = () => {
+    // Si hay acción (ej: Deshacer), mostramos botón y lo conectamos
+    if (el.toastAction && onAction) {
+      el.toastAction.textContent = actionText || "Deshacer";
+      el.toastAction.hidden = false;
+      el.toastAction.onclick = () => {
         onAction();
         hideToast();
       };
-    } else if (toastAction) {
-      toastAction.hidden = true;
-      toastAction.onclick = null;
+    } else if (el.toastAction) {
+      el.toastAction.hidden = true;
+      el.toastAction.onclick = null;
     }
 
-    if (undoTimer) clearTimeout(undoTimer);
-    undoTimer = setTimeout(() => hideToast(), timeout);
+    // Auto-cerrar toast
+    if (state.undoTimer) clearTimeout(state.undoTimer);
+    state.undoTimer = setTimeout(() => hideToast(), timeout);
   }
 
-  // Eventos del toast
-  if (toastClose) {
-    toastClose.addEventListener("click", hideToast);
-  }
+  // Render: reconstruye la lista visible desde state (estado -> UI)
+  function render() {
+    el.list.innerHTML = "";
+    updateStatsUI();
+    setActiveFilterUI();
 
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && toast && !toast.hidden) hideToast();
-  });
+    const visible = visibleTasks();
 
-  function updateStats() {
-    if (!statsEl) return;
-
-    const total = tasks.length;
-    const done = tasks.filter((t) => t.done).length;
-    const todo = total - done;
-
-    statsEl.textContent = `Total: ${total} · Hechas: ${done} · Pendientes: ${todo}`;
-  }
-
-  function getVisibleTasks() {
-    if (currentFilter === "done") return tasks.filter((t) => t.done);
-    if (currentFilter === "todo") return tasks.filter((t) => !t.done);
-    return tasks;
-  }
-
-  function setActiveFilterBtn() {
-    if (!filterButtons.length) return;
-
-    for (const btn of filterButtons) {
-      btn.classList.toggle("is-active", btn.dataset.filter === currentFilter);
-    }
-  }
-
-  function handleEdit(task) {
-    const nuevo = prompt("Editar tarea:", task.text);
-    if (nuevo === null) return; // canceló
-
-    const value = nuevo.trim();
-    if (value.length < 2) {
-      taskStatus.textContent = "La tarea editada es muy corta.";
+    // Caso: no hay nada en todo el sistema
+    if (state.tasks.length === 0) {
+      setStatus("No tienes tareas todavía. Agrega una arriba.");
       return;
     }
 
-    const exists = tasks.some(
-      (t) =>
-        t.id !== task.id && t.text.trim().toLowerCase() === value.toLowerCase()
-    );
-
-    if (exists) {
-      taskStatus.textContent = "Ya existe una tarea con ese nombre.";
-      return;
-    }
-
-    task.text = value;
-    saveTasks();
-    renderTasks();
-  }
-
-  function renderTasks() {
-    taskList.innerHTML = "";
-    updateStats();
-    setActiveFilterBtn();
-
-    const visible = getVisibleTasks();
-
-    if (tasks.length === 0) {
-      taskStatus.textContent = "No tienes tareas todavía. Agrega una arriba.";
-      return;
-    }
-
+    // Caso: hay tareas pero el filtro deja 0 visibles
     if (visible.length === 0) {
-      taskStatus.textContent = "No hay tareas para este filtro.";
+      setStatus("No hay tareas para este filtro.");
       return;
     }
 
-    taskStatus.textContent = "";
+    setStatus("");
 
     for (const task of visible) {
       const li = document.createElement("li");
@@ -172,15 +194,6 @@ export function initTasksDemo() {
       text.textContent = task.text;
       if (task.done) text.classList.add("task-done");
 
-      checkbox.addEventListener("change", () => {
-        task.done = checkbox.checked;
-        saveTasks();
-        renderTasks();
-      });
-
-      // Doble click para editar
-      text.addEventListener("dblclick", () => handleEdit(task));
-
       const actions = document.createElement("div");
       actions.style.display = "flex";
       actions.style.gap = "8px";
@@ -188,19 +201,13 @@ export function initTasksDemo() {
       const editBtn = document.createElement("button");
       editBtn.type = "button";
       editBtn.textContent = "Editar";
-      editBtn.addEventListener("click", () => handleEdit(task));
 
-      const del = document.createElement("button");
-      del.type = "button";
-      del.textContent = "Eliminar";
-      del.addEventListener("click", () => {
-        tasks = tasks.filter((t) => t.id !== task.id);
-        saveTasks();
-        renderTasks();
-      });
+      const delBtn = document.createElement("button");
+      delBtn.type = "button";
+      delBtn.textContent = "Eliminar";
 
       actions.appendChild(editBtn);
-      actions.appendChild(del);
+      actions.appendChild(delBtn);
 
       left.appendChild(checkbox);
       left.appendChild(text);
@@ -208,99 +215,34 @@ export function initTasksDemo() {
       li.appendChild(left);
       li.appendChild(actions);
 
-      taskList.appendChild(li);
+      el.list.appendChild(li);
+
+      // Conectamos UI -> Actions (F)
+      checkbox.addEventListener("change", () => actionToggleTask(task.id, checkbox.checked));
+      delBtn.addEventListener("click", () => actionDeleteTask(task.id));
+      editBtn.addEventListener("click", () => actionEditTask(task.id));
+      text.addEventListener("dblclick", () => actionEditTask(task.id));
     }
   }
 
-  // Filtros
-  for (const btn of filterButtons) {
-    btn.addEventListener("click", () => {
-      currentFilter = btn.dataset.filter;
-      renderTasks();
-    });
+  // =========================================================
+  // F) ACTIONS — cambian el estado + guardan + renderizan
+  // =========================================================
+  function apply(newTasks) {
+    // Centro de actualización: evita olvidar save/render en algún lado
+    state.tasks = newTasks;
+    save();
+    render();
   }
 
-  // Acciones: borrar completadas
-  if (btnClearDone) {
-    btnClearDone.addEventListener("click", () => {
-      const doneCount = tasks.filter((t) => t.done).length;
+  function actionAddTask(rawText) {
+    const value = (rawText || "").trim();
+    if (value.length < 2) return setStatus("La tarea es muy corta.");
 
-      if (doneCount === 0) {
-        taskStatus.textContent = "No hay tareas completadas para borrar.";
-        return;
-      }
-
-      const ok = confirm(`¿Borrar ${doneCount} tarea(s) completada(s)?`);
-      if (!ok) return;
-
-      snapshotTasks();
-
-      tasks = tasks.filter((t) => !t.done);
-      saveTasks();
-      renderTasks();
-
-      showToast(`Borraste ${doneCount} completada(s).`, {
-        actionText: "Deshacer",
-        onAction: () => {
-          tasks = undoSnapshot || [];
-          saveTasks();
-          renderTasks();
-          showToast("Acción deshecha.");
-        },
-      });
-    });
-  }
-
-  // Acciones: vaciar todo
-  if (btnClearAll) {
-    btnClearAll.addEventListener("click", () => {
-      if (tasks.length === 0) {
-        taskStatus.textContent = "No hay tareas para borrar.";
-        return;
-      }
-
-      const ok = confirm("¿Vaciar TODO? Esto no se puede deshacer.");
-      if (!ok) return;
-
-      snapshotTasks();
-      const prevCount = tasks.length;
-
-      tasks = [];
-      saveTasks();
-      renderTasks();
-
-      showToast(`Borraste ${prevCount} tarea(s).`, {
-        actionText: "Deshacer",
-        onAction: () => {
-          tasks = undoSnapshot || [];
-          saveTasks();
-          renderTasks();
-          showToast("Acción deshecha.");
-        },
-      });
-    });
-  }
-
-  // Agregar tarea
-  taskForm.addEventListener("submit", (event) => {
-    event.preventDefault();
-    taskStatus.textContent = "";
-
-    const value = taskInput.value.trim();
-
-    if (value.length < 2) {
-      taskStatus.textContent = "La tarea es muy corta.";
-      return;
-    }
-
-    const exists = tasks.some(
+    const exists = state.tasks.some(
       (t) => t.text.trim().toLowerCase() === value.toLowerCase()
     );
-
-    if (exists) {
-      taskStatus.textContent = "Esa tarea ya existe.";
-      return;
-    }
+    if (exists) return setStatus("Esa tarea ya existe.");
 
     const newTask = {
       id: crypto.randomUUID(),
@@ -309,15 +251,109 @@ export function initTasksDemo() {
       createdAt: Date.now(),
     };
 
-    tasks.unshift(newTask);
-    saveTasks();
-    renderTasks();
+    apply([newTask, ...state.tasks]);
+  }
 
-    taskForm.reset();
-    taskInput.focus();
+  function actionToggleTask(id, done) {
+    apply(state.tasks.map((t) => (t.id === id ? { ...t, done } : t)));
+  }
+
+  function actionDeleteTask(id) {
+    apply(state.tasks.filter((t) => t.id !== id));
+  }
+
+  function actionSetFilter(filter) {
+    state.filter = filter;
+    render(); // solo cambia lo que se muestra, no los datos
+  }
+
+  function actionEditTask(id) {
+    const task = state.tasks.find((t) => t.id === id);
+    if (!task) return;
+
+    const nuevo = prompt("Editar tarea:", task.text);
+    if (nuevo === null) return;
+
+    const value = nuevo.trim();
+    if (value.length < 2) return setStatus("La tarea editada es muy corta.");
+
+    const exists = state.tasks.some(
+      (t) => t.id !== id && t.text.trim().toLowerCase() === value.toLowerCase()
+    );
+    if (exists) return setStatus("Ya existe una tarea con ese nombre.");
+
+    apply(state.tasks.map((t) => (t.id === id ? { ...t, text: value } : t)));
+  }
+
+  function actionUndo() {
+    if (!state.undoSnapshot) return;
+    apply(state.undoSnapshot);
+    showToast("Acción deshecha.");
+  }
+
+  function actionClearDone() {
+    const doneCount = state.tasks.filter((t) => t.done).length;
+
+    if (doneCount === 0) return setStatus("No hay tareas completadas para borrar.");
+
+    const ok = confirm(`¿Borrar ${doneCount} tarea(s) completada(s)?`);
+    if (!ok) return;
+
+    snapshotTasks();
+    apply(state.tasks.filter((t) => !t.done));
+
+    showToast(`Borraste ${doneCount} completada(s).`, {
+      actionText: "Deshacer",
+      onAction: actionUndo,
+    });
+  }
+
+  function actionClearAll() {
+    if (state.tasks.length === 0) return setStatus("No hay tareas para borrar.");
+
+    const ok = confirm("¿Vaciar TODO? Esto no se puede deshacer.");
+    if (!ok) return;
+
+    snapshotTasks();
+    const prevCount = state.tasks.length;
+
+    apply([]);
+
+    showToast(`Borraste ${prevCount} tarea(s).`, {
+      actionText: "Deshacer",
+      onAction: actionUndo,
+    });
+  }
+
+  // =========================================================
+  // G) EVENTS — conectan acciones del usuario -> Actions
+  // =========================================================
+  el.form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    setStatus("");
+
+    actionAddTask(el.input.value);
+
+    el.form.reset();
+    el.input.focus();
   });
 
-  // Init
-  loadTasks();
-  renderTasks();
+  for (const btn of el.filters) {
+    btn.addEventListener("click", () => actionSetFilter(btn.dataset.filter));
+  }
+
+  if (el.clearDone) el.clearDone.addEventListener("click", actionClearDone);
+  if (el.clearAll) el.clearAll.addEventListener("click", actionClearAll);
+
+  if (el.toastClose) el.toastClose.addEventListener("click", hideToast);
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && el.toast && !el.toast.hidden) hideToast();
+  });
+
+  // =========================================================
+  // INIT — cargar datos y pintar
+  // =========================================================
+  load();
+  render();
 }
